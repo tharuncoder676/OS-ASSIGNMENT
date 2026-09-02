@@ -7,8 +7,10 @@
 | **Course** | CSA04 — Operating Systems |
 | **Course Outcomes** | CO3 (Virtual Memory & Paging) · CO4 (File Systems, Inodes & Disk Scheduling) · CO5 (Linux Administration, Network Services & Virtualization) |
 | **Bloom's Levels** | L3 Apply · L4 Analyse · L5 Evaluate |
+| **Faculty** | Dr. Priskilla Angel Rani .J |
 | **Student** | Tharunkumar S — Reg. No. 192511416 |
 | **Academic Year** | 2026–2027 |
+| **Date of Submission** | 02 / 09 / 2026 |
 | **Marks** | 100 |
 
 ---

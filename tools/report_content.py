@@ -66,6 +66,7 @@ def cover(doc):
         ("Programme", "B.E. / B.Tech — CSE"),
         ("Course Code & Name", "CSA04 — Operating Systems"),
         ("Academic Year / Batch", "2026 – 2027"),
+        ("Faculty Name", "Dr. Priskilla Angel Rani .J"),
         ("Assignment Title", "Design, Memory Optimization, and System Administration "
                              "of an Enterprise Cloud & Virtualization Platform"),
         ("Course Outcomes", "CO3 — Virtual memory and paging;  CO4 — File systems, "
@@ -74,6 +75,7 @@ def cover(doc):
         ("Bloom's Taxonomy Level", "L3 — Apply;  L4 — Analyse;  L5 — Evaluate"),
         ("SDG Mapping", "SDG 7 — Affordable and Clean Energy;  SDG 9 — Industry, "
                         "Innovation and Infrastructure;  SDG 11 — Sustainable Cities"),
+        ("Date of Submission", "02 / 09 / 2026"),
         ("Maximum Marks", "100"),
         ("Submitted By", f"{NAME}          Reg. No. {REGNO}"),
         ("Implementation Repository", REPO),
