@@ -1,0 +1,91 @@
+// ===========================================================================
+//  CloudMatrix - BIND 9 global options
+//  File: /etc/bind/named.conf.options
+//  Host: ns1.cloudmatrix.local (10.20.30.10)
+//
+//  Validate with:  named-checkconf /etc/bind/named.conf
+// ===========================================================================
+
+// Only the CloudMatrix management LAN and the guest VM bridge may recurse.
+// Leaving recursion open to the world is how a DNS server becomes an
+// amplification reflector, so the ACL is not optional hardening -- it is the
+// difference between a resolver and a weapon.
+acl cloudmatrix-internal {
+    127.0.0.0/8;
+    10.20.30.0/24;        // management LAN + br0 guest bridge
+    10.20.40.0/24;        // tenant overlay network
+};
+
+options {
+    directory "/var/cache/bind";
+
+    // --- listening ------------------------------------------------------
+    listen-on port 53 { 127.0.0.1; 10.20.30.10; };
+    listen-on-v6 { none; };
+
+    // --- who may ask what -----------------------------------------------
+    allow-query        { cloudmatrix-internal; };
+    allow-recursion    { cloudmatrix-internal; };
+    allow-query-cache  { cloudmatrix-internal; };
+    allow-transfer     { 10.20.30.11; };          // ns2 only
+    allow-update       { none; };                 // no dynamic updates
+
+    recursion yes;
+
+    // --- upstream --------------------------------------------------------
+    forwarders {
+        1.1.1.1;
+        9.9.9.9;
+    };
+    forward first;
+
+    // --- anti-spoofing ---------------------------------------------------
+    // DNSSEC validation rejects forged answers that fail the chain of trust.
+    dnssec-validation auto;
+
+    // Randomised source ports make Kaminsky-style cache-poisoning attacks
+    // computationally impractical rather than merely inconvenient.
+    query-source address 10.20.30.10;
+    use-v4-udp-ports { range 1024 65535; };
+
+    // Rate limiting blunts reflection attacks that survive the ACL.
+    rate-limit {
+        responses-per-second 15;
+        window 5;
+        slip 2;
+    };
+
+    // --- hygiene ---------------------------------------------------------
+    version "not disclosed";      // do not advertise the BIND version
+    hostname none;
+    server-id none;
+    minimal-responses yes;
+
+    max-cache-size 256M;
+    max-cache-ttl 86400;
+    max-ncache-ttl 3600;
+
+    auth-nxdomain no;
+};
+
+// --- logging: GDPR-conscious query logging --------------------------------
+// Query logs contain client IPs, which are personal data under GDPR Art. 4.
+// They are therefore kept in a dedicated channel with a short rotation and a
+// documented 30-day retention, not merged into the general syslog stream.
+logging {
+    channel query_log {
+        file "/var/log/named/query.log" versions 7 size 50m;
+        severity info;
+        print-time yes;
+        print-category yes;
+    };
+    channel security_log {
+        file "/var/log/named/security.log" versions 30 size 20m;
+        severity dynamic;
+        print-time yes;
+    };
+    category queries          { query_log; };
+    category security         { security_log; };
+    category dnssec           { security_log; };
+    category lame-servers     { null; };
+};

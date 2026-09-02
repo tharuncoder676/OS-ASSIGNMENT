@@ -1,0 +1,50 @@
+// ===========================================================================
+//  CloudMatrix - authoritative zone declarations
+//  File: /etc/bind/named.conf.local
+//  Primary (master): ns1.cloudmatrix.local  10.20.30.10
+//  Secondary (slave): ns2.cloudmatrix.local 10.20.30.11
+// ===========================================================================
+
+// TSIG key shared with ns2. Zone transfers are authenticated, so a rogue host
+// on the LAN cannot pull the full zone and map the entire estate.
+key "cloudmatrix-xfer" {
+    algorithm hmac-sha256;
+    secret "V2h5IHllcyBJIGRpZCByZWFkIHRoZSBSRkMsIHRoYW5rcy4=";
+};
+
+server 10.20.30.11 {
+    keys { cloudmatrix-xfer; };
+};
+
+// --- forward lookup zone ---------------------------------------------------
+zone "cloudmatrix.local" {
+    type master;
+    file "/etc/bind/zones/db.cloudmatrix.local";
+    allow-transfer { key cloudmatrix-xfer; };
+    also-notify    { 10.20.30.11; };
+    notify yes;
+};
+
+// --- reverse lookup zone for 10.20.30.0/24 --------------------------------
+zone "30.20.10.in-addr.arpa" {
+    type master;
+    file "/etc/bind/zones/db.10.20.30";
+    allow-transfer { key cloudmatrix-xfer; };
+    also-notify    { 10.20.30.11; };
+    notify yes;
+};
+
+// --- tenant overlay reverse zone ------------------------------------------
+zone "40.20.10.in-addr.arpa" {
+    type master;
+    file "/etc/bind/zones/db.10.20.40";
+    allow-transfer { key cloudmatrix-xfer; };
+    notify yes;
+};
+
+// On ns2 the same three zones are declared as:
+//   zone "cloudmatrix.local" {
+//       type slave;
+//       file "/var/cache/bind/db.cloudmatrix.local";
+//       masters { 10.20.30.10 key cloudmatrix-xfer; };
+//   };

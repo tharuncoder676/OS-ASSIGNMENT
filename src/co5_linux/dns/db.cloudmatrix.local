@@ -1,0 +1,55 @@
+;
+; CloudMatrix forward lookup zone
+; File: /etc/bind/zones/db.cloudmatrix.local
+;
+; Validate with:
+;   named-checkzone cloudmatrix.local /etc/bind/zones/db.cloudmatrix.local
+;
+$TTL    3600
+@       IN      SOA     ns1.cloudmatrix.local. hostmaster.cloudmatrix.local. (
+                        2026090201      ; Serial   YYYYMMDDnn - bump on every edit
+                        3600            ; Refresh  ns2 re-checks hourly
+                        900             ; Retry    15 min after a failed refresh
+                        1209600         ; Expire   14 days before ns2 goes stale
+                        900 )           ; Negative cache TTL
+
+; ---- name servers --------------------------------------------------------
+@               IN      NS      ns1.cloudmatrix.local.
+@               IN      NS      ns2.cloudmatrix.local.
+
+ns1             IN      A       10.20.30.10
+ns2             IN      A       10.20.30.11
+
+; ---- infrastructure ------------------------------------------------------
+gw              IN      A       10.20.30.1
+dhcp            IN      A       10.20.30.12
+hypervisor      IN      A       10.20.30.5
+storage         IN      A       10.20.30.6
+monitor         IN      A       10.20.30.7
+
+; ---- guest virtual machines ----------------------------------------------
+vm-web-01       IN      A       10.20.30.101
+vm-db-02        IN      A       10.20.30.102
+vm-dns-03       IN      A       10.20.30.103
+vm-batch-04     IN      A       10.20.30.104
+vm-app-05       IN      A       10.20.30.105
+vm-cache-06     IN      A       10.20.30.106
+vm-win11-07     IN      A       10.20.30.107
+
+; ---- service aliases -----------------------------------------------------
+www             IN      CNAME   vm-web-01
+db              IN      CNAME   vm-db-02
+cache           IN      CNAME   vm-cache-06
+portal          IN      CNAME   vm-app-05
+
+; ---- mail ----------------------------------------------------------------
+@               IN      MX 10   mail.cloudmatrix.local.
+mail            IN      A       10.20.30.20
+
+; ---- service discovery ---------------------------------------------------
+_ldap._tcp      IN      SRV     0 5 389  vm-app-05.cloudmatrix.local.
+_http._tcp      IN      SRV     0 5 80   vm-web-01.cloudmatrix.local.
+
+; ---- policy records ------------------------------------------------------
+@               IN      TXT     "v=spf1 ip4:10.20.30.20 -all"
+@               IN      CAA     0 issue "letsencrypt.org"

@@ -1,0 +1,46 @@
+# ===========================================================================
+#  CloudMatrix - host network configuration
+#  File: /etc/netplan/01-cloudmatrix-bridge.yaml
+#  Apply with:  netplan generate && netplan apply
+#
+#  br0 is the L2 bridge every guest vNIC attaches to. Putting the host IP on
+#  the bridge rather than on the physical NIC is what lets guests and the host
+#  share one broadcast domain without NAT, which is required for DHCP and for
+#  the reverse DNS zone to describe reality.
+# ===========================================================================
+network:
+  version: 2
+  renderer: networkd
+
+  ethernets:
+    eno1:
+      dhcp4: no
+      dhcp6: no
+      # No address here: the address belongs to the bridge.
+
+  bridges:
+    br0:
+      interfaces: [eno1]
+      addresses:
+        - 10.20.30.5/24
+      routes:
+        - to: default
+          via: 10.20.30.1
+      nameservers:
+        addresses: [10.20.30.10, 10.20.30.11]
+        search: [cloudmatrix.local]
+      parameters:
+        stp: true             # loop protection on a bridge with many taps
+        forward-delay: 4
+        hello-time: 2
+      dhcp4: no
+      dhcp6: no
+
+  # Tenant overlay bridge: isolated L2 domain, no host IP, no default route.
+  # Guests on br1 cannot reach the management LAN at layer 2 at all.
+    br1:
+      interfaces: []
+      dhcp4: no
+      dhcp6: no
+      parameters:
+        stp: false

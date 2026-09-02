@@ -1,0 +1,128 @@
+<!--
+  CloudMatrix - libvirt/KVM domain definition for the web tier guest
+  File: /etc/libvirt/qemu/vm-web-01.xml
+
+  Define with : virsh define libvirt-vm-web-01.xml
+  Start with  : virsh start vm-web-01
+  Inspect     : virsh dominfo vm-web-01 ; virsh domstats vm-web-01
+-->
+<domain type='kvm'>
+  <name>vm-web-01</name>
+  <uuid>7f3a91c2-5d84-4e10-b6a7-1c28e0f39d55</uuid>
+  <title>CloudMatrix web tier (nginx)</title>
+
+  <!-- Memory: current is the balloon floor, maximum is the inflation ceiling -->
+  <memory unit='MiB'>2048</memory>
+  <currentMemory unit='MiB'>1024</currentMemory>
+  <memoryBacking>
+    <!-- Web tier stays on 4 KB pages: its working set is small and the
+         balloon needs fine reclaim granularity. Hugepages are reserved for
+         the database guest, where TLB pressure actually dominates. -->
+    <source type='memfd'/>
+    <access mode='shared'/>
+  </memoryBacking>
+
+  <vcpu placement='static' current='2'>4</vcpu>
+  <cputune>
+    <!-- Pin to NUMA node 1 cores; keep the DB tier's node 0 cores free -->
+    <vcpupin vcpu='0' cpuset='16'/>
+    <vcpupin vcpu='1' cpuset='17'/>
+    <shares>256</shares>
+    <period>100000</period>
+    <quota>150000</quota>   <!-- hard cap at 1.5 cores: noisy-neighbour control -->
+  </cputune>
+
+  <numatune>
+    <memory mode='strict' nodeset='1'/>
+  </numatune>
+
+  <os>
+    <type arch='x86_64' machine='pc-q35-8.2'>hvm</type>
+    <boot dev='hd'/>
+    <!-- UEFI Secure Boot: the guest cannot load an unsigned kernel -->
+    <loader readonly='yes' secure='yes' type='pflash'>/usr/share/OVMF/OVMF_CODE.secboot.fd</loader>
+    <nvram>/var/lib/libvirt/qemu/nvram/vm-web-01_VARS.fd</nvram>
+  </os>
+
+  <features>
+    <acpi/><apic/>
+    <smm state='on'/>
+    <vmport state='off'/>
+  </features>
+
+  <cpu mode='host-passthrough' check='none'>
+    <topology sockets='1' dies='1' cores='2' threads='1'/>
+    <feature policy='require' name='invtsc'/>
+  </cpu>
+
+  <clock offset='utc'>
+    <timer name='rtc' tickpolicy='catchup'/>
+    <timer name='hpet' present='no'/>
+  </clock>
+
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>destroy</on_crash>
+
+  <pm>
+    <suspend-to-mem enabled='no'/>
+    <suspend-to-disk enabled='no'/>
+  </pm>
+
+  <devices>
+    <emulator>/usr/bin/qemu-system-x86_64</emulator>
+
+    <!-- OS disk: qcow2 with the host page cache bypassed. cache='none' is
+         what makes fsync() from the guest reach real stable storage instead
+         of stopping in the host page cache, which is the difference between
+         a durable write and a lost one after a host power failure. -->
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2' cache='none' io='native' discard='unmap'/>
+      <source file='/var/lib/libvirt/images/vm-web-01.qcow2'/>
+      <target dev='vda' bus='virtio'/>
+      <!-- Per-guest I/O throttling: one tenant cannot monopolise the queue -->
+      <iotune>
+        <total_iops_sec>3000</total_iops_sec>
+        <total_bytes_sec>209715200</total_bytes_sec>
+      </iotune>
+      <address type='pci' domain='0x0000' bus='0x04' slot='0x00' function='0x0'/>
+    </disk>
+
+    <interface type='bridge'>
+      <mac address='52:54:00:a1:01:01'/>
+      <source bridge='br0'/>
+      <model type='virtio'/>
+      <driver name='vhost' queues='2'/>
+      <!-- MAC/IP anti-spoof filter: the guest cannot impersonate another
+           tenant or the gateway on the shared L2 segment. -->
+      <filterref filter='clean-traffic'>
+        <parameter name='IP' value='10.20.30.101'/>
+      </filterref>
+      <bandwidth>
+        <inbound average='125000' peak='250000' burst='2048'/>
+        <outbound average='125000' peak='250000' burst='2048'/>
+      </bandwidth>
+    </interface>
+
+    <channel type='unix'>
+      <target type='virtio' name='org.qemu.guest_agent.0'/>
+    </channel>
+
+    <memballoon model='virtio'>
+      <stats period='10'/>   <!-- balloon stats every 10 s feed the PFF loop -->
+    </memballoon>
+
+    <rng model='virtio'>
+      <backend model='random'>/dev/urandom</backend>
+    </rng>
+
+    <graphics type='vnc' port='-1' autoport='yes' listen='127.0.0.1'>
+      <listen type='address' address='127.0.0.1'/>
+    </graphics>
+    <console type='pty'/>
+  </devices>
+
+  <!-- sVirt: every guest gets a distinct SELinux category pair, so even a
+       QEMU process escape cannot open another tenant's image file. -->
+  <seclabel type='dynamic' model='selinux' relabel='yes'/>
+</domain>

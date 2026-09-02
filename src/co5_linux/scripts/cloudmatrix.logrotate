@@ -1,0 +1,65 @@
+# ===========================================================================
+#  CloudMatrix - log rotation policy
+#  File: /etc/logrotate.d/cloudmatrix
+#
+#  Retention is set per-stream, not globally, because the streams carry
+#  different classes of data:
+#    * BIND query logs contain client IP addresses -> personal data under
+#      GDPR Art. 4, so 30 days maximum and 0640 root:bind.
+#    * Security and audit logs are kept a year: they are the evidence trail
+#      an ISO/IEC 27001 audit asks for.
+#    * DHCP lease logs sit in the middle at 90 days.
+# ===========================================================================
+
+/var/log/named/query.log {
+    daily
+    rotate 30                 # 30 days: GDPR data-minimisation
+    maxsize 50M
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 bind bind
+    sharedscripts
+    postrotate
+        /usr/sbin/rndc reopen >/dev/null 2>&1 || true
+    endscript
+}
+
+/var/log/named/security.log {
+    weekly
+    rotate 52                 # one year of security evidence
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 bind bind
+    postrotate
+        /usr/sbin/rndc reopen >/dev/null 2>&1 || true
+    endscript
+}
+
+/var/log/cloudmatrix/*.log {
+    daily
+    rotate 90
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate              # the scripts hold the fd open while running
+    create 0640 root adm
+    su root adm
+}
+
+/var/log/libvirt/qemu/*.log {
+    weekly
+    rotate 12
+    compress
+    missingok
+    notifempty
+    create 0640 root root
+    sharedscripts
+    postrotate
+        /bin/systemctl reload libvirtd >/dev/null 2>&1 || true
+    endscript
+}

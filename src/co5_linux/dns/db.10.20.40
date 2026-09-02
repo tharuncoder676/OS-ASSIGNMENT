@@ -1,0 +1,19 @@
+;
+; CloudMatrix reverse lookup zone for the tenant overlay 10.20.40.0/24
+; File: /etc/bind/zones/db.10.20.40
+;
+$TTL    3600
+@       IN      SOA     ns1.cloudmatrix.local. hostmaster.cloudmatrix.local. (
+                        2026090201      ; Serial
+                        3600            ; Refresh
+                        900             ; Retry
+                        1209600         ; Expire
+                        900 )           ; Negative cache TTL
+
+@               IN      NS      ns1.cloudmatrix.local.
+@               IN      NS      ns2.cloudmatrix.local.
+
+1               IN      PTR     overlay-gw.cloudmatrix.local.
+10              IN      PTR     tenant-a-node1.cloudmatrix.local.
+11              IN      PTR     tenant-a-node2.cloudmatrix.local.
+20              IN      PTR     tenant-b-node1.cloudmatrix.local.

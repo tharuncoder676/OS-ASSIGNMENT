@@ -1,0 +1,36 @@
+;
+; CloudMatrix reverse lookup zone for 10.20.30.0/24
+; File: /etc/bind/zones/db.10.20.30
+;
+; Validate with:
+;   named-checkzone 30.20.10.in-addr.arpa /etc/bind/zones/db.10.20.30
+;
+$TTL    3600
+@       IN      SOA     ns1.cloudmatrix.local. hostmaster.cloudmatrix.local. (
+                        2026090201      ; Serial
+                        3600            ; Refresh
+                        900             ; Retry
+                        1209600         ; Expire
+                        900 )           ; Negative cache TTL
+
+@               IN      NS      ns1.cloudmatrix.local.
+@               IN      NS      ns2.cloudmatrix.local.
+
+; ---- infrastructure ------------------------------------------------------
+1               IN      PTR     gw.cloudmatrix.local.
+5               IN      PTR     hypervisor.cloudmatrix.local.
+6               IN      PTR     storage.cloudmatrix.local.
+7               IN      PTR     monitor.cloudmatrix.local.
+10              IN      PTR     ns1.cloudmatrix.local.
+11              IN      PTR     ns2.cloudmatrix.local.
+12              IN      PTR     dhcp.cloudmatrix.local.
+20              IN      PTR     mail.cloudmatrix.local.
+
+; ---- guest virtual machines ----------------------------------------------
+101             IN      PTR     vm-web-01.cloudmatrix.local.
+102             IN      PTR     vm-db-02.cloudmatrix.local.
+103             IN      PTR     vm-dns-03.cloudmatrix.local.
+104             IN      PTR     vm-batch-04.cloudmatrix.local.
+105             IN      PTR     vm-app-05.cloudmatrix.local.
+106             IN      PTR     vm-cache-06.cloudmatrix.local.
+107             IN      PTR     vm-win11-07.cloudmatrix.local.
