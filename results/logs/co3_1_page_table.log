@@ -1,0 +1,72 @@
+==============================================================================
+ CloudMatrix Operating Systems Assignment - CSA04 (CO3 / CO4 / CO5)
+ CO3.1  Memory layout, two-level page table, TLB
+ Generated : 2026-09-02 06:08:08 UTC
+ Python    : 3.12.10 on Windows 11
+ Repository: https://github.com/tharuncoder676/OS-ASSIGNMENT
+==============================================================================
+
+==============================================================================
+ CO3.1  MEMORY LAYOUT AND PAGE TABLE GEOMETRY - CloudMatrix host
+==============================================================================
+  Physical RAM                  : 32 GB = 2^35 bytes
+  Page / frame size             : 4 KB = 2^12 bytes
+  TOTAL PHYSICAL FRAMES         : 8,388,608  (2^23)
+  Logical AS per process        : 128 MB = 2^27 bytes
+  VIRTUAL PAGES PER PROCESS     : 32,768  (2^15)
+
+  Virtual address width         : 27 bits   [ p = 15 bits | d = 12 bits ]
+  Physical address width        : 35 bits   [ f = 23 bits | d = 12 bits ]
+
+  --- Two-level split (inner table sized to exactly one page) ---
+  PTE size                      : 4 bytes
+  Entries per 4 KB table page   : 1024  ->  inner index p2 = 10 bits
+  Outer index p1                : 15 - 10 = 5 bits
+  VA layout                     : | p1 = 5 | p2 = 10 | d = 12 |
+  Outer page table              : 32 entries = 128 bytes
+  Each inner page table         : 1024 entries = 4 KB (exactly one frame)
+
+  --- Space cost of the design decision ---
+  Single-level (flat) table     : 128 KB per process, resident whether or not the pages are touched
+  Two-level, fully populated    : 128 KB per process
+  Two-level, sparse (1 inner)   : 4 KB per process
+  1,200 sessions x sparse cost  : 4.83 MB out of the 32 GB pool
+  1,200 sessions x flat cost    : 150.00 MB (32x worse, and mostly never referenced)
+
+==============================================================================
+ CO3.1  LIVE ADDRESS TRANSLATION TRACE (two-level walk + 64-entry TLB)
+==============================================================================
+   VA 0x0000000  p1=0   p2=0     d=0x000  ->  frame 0    PA 0x000000000   PAGE FAULT        (frame allocated)
+   VA 0x0000ABC  p1=0   p2=0     d=0xABC  ->  frame 0    PA 0x000000ABC   TLB hit           (1 memory ref)
+   VA 0x0001000  p1=0   p2=1     d=0x000  ->  frame 1    PA 0x000001000   PAGE FAULT        (frame allocated)
+   VA 0x0000ABC  p1=0   p2=0     d=0xABC  ->  frame 0    PA 0x000000ABC   TLB hit           (1 memory ref)
+   VA 0x0400000  p1=1   p2=0     d=0x000  ->  frame 2    PA 0x000002000   PAGE FAULT        (frame allocated)
+   VA 0x0400FFF  p1=1   p2=0     d=0xFFF  ->  frame 2    PA 0x000002FFF   TLB hit           (1 memory ref)
+   VA 0x0401000  p1=1   p2=1     d=0x000  ->  frame 3    PA 0x000003000   PAGE FAULT        (frame allocated)
+   VA 0x0400010  p1=1   p2=0     d=0x010  ->  frame 2    PA 0x000002010   TLB hit           (1 memory ref)
+   VA 0x07FF000  p1=1   p2=1023  d=0x000  ->  frame 4    PA 0x000004000   PAGE FAULT        (frame allocated)
+   VA 0x07FFFFF  p1=1   p2=1023  d=0xFFF  ->  frame 4    PA 0x000004FFF   TLB hit           (1 memory ref)
+   VA 0x0000ABC  p1=0   p2=0     d=0xABC  ->  frame 0    PA 0x000000ABC   TLB hit           (1 memory ref)
+   VA 0x0400010  p1=1   p2=0     d=0x010  ->  frame 2    PA 0x000002010   TLB hit           (1 memory ref)
+
+   Translations        : 12
+   TLB hits / misses   : 7 / 5   (hit ratio 58.3%)
+   Page faults         : 5
+   Physical memory refs: 22
+   Effective access time (TLB 1 ns, RAM 100 ns) : 184.33 ns
+   With no TLB at all, every reference costs 3 x 100 = 300.00 ns
+   -> the sub-millisecond translation latency required by Section D is met
+      by four orders of magnitude; the design constraint is not latency
+      but page-table residency, which the two-level split addresses.
+
+==============================================================================
+ CO3.1  4 KB PAGES vs 2 MB HUGEPAGES for the 128 MB working set
+==============================================================================
+   4 KB pages      :  32,768 PTEs cover 128 MB, page tables =   128.00 KB, TLB entries needed = 32,768
+   2 MB hugepages  :      64 PTEs cover 128 MB, page tables =     0.25 KB, TLB entries needed = 64
+   -> hugepages cut TLB pressure 512x for the database tier, at the cost
+      of coarser reclaim granularity; recommended for the DB VMs only.
+
+==============================================================================
+ Completed in 0.000 s
+==============================================================================

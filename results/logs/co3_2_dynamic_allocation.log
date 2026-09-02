@@ -1,0 +1,90 @@
+==============================================================================
+ CloudMatrix Operating Systems Assignment - CSA04 (CO3 / CO4 / CO5)
+ CO3.2  First-Fit / Best-Fit / Worst-Fit, dynamic linking
+ Generated : 2026-09-02 06:08:08 UTC
+ Python    : 3.12.10 on Windows 11
+ Repository: https://github.com/tharuncoder676/OS-ASSIGNMENT
+==============================================================================
+
+==============================================================================
+ CO3.2  DYNAMIC STORAGE ALLOCATION - guest VM placement into host holes
+==============================================================================
+   Free hole list (MB) : [1200, 3400, 512, 2800, 900, 6100, 1500, 4200]
+   Total free          : 20,612 MB
+   Queued VM demand    : 13,902 MB across 7 guests
+
+  --- FIRST-FIT -----------------------------------------------------------
+   Guest VM                     Req (MB)   Hole  Left (MB)   Status
+   vm-web-01     (nginx tier)        850      0        350   placed
+   vm-db-02      (PostgreSQL)       4096      5       2004   placed
+   vm-dns-03     (BIND9)             256      0         94   placed
+   vm-batch-04   (Spark exec)       2900      1        500   placed
+   vm-app-05     (ERP tier)         1400      3       1400   placed
+   vm-cache-06   (Redis)            1100      3        300   placed
+   vm-analytics-07                  3300      7        900   placed
+   Holes after      : [94, 500, 512, 300, 900, 2004, 1500, 900]
+   Rejected         : 0   Free left: 6,710 MB   Largest hole: 2,004 MB
+   Stranded (<256MB): 94 MB  -> unusable by any CloudMatrix guest
+
+  --- BEST-FIT ------------------------------------------------------------
+   Guest VM                     Req (MB)   Hole  Left (MB)   Status
+   vm-web-01     (nginx tier)        850      4         50   placed
+   vm-db-02      (PostgreSQL)       4096      7        104   placed
+   vm-dns-03     (BIND9)             256      2        256   placed
+   vm-batch-04   (Spark exec)       2900      1        500   placed
+   vm-app-05     (ERP tier)         1400      6        100   placed
+   vm-cache-06   (Redis)            1100      0        100   placed
+   vm-analytics-07                  3300      5       2800   placed
+   Holes after      : [100, 500, 256, 2800, 50, 2800, 100, 104]
+   Rejected         : 0   Free left: 6,710 MB   Largest hole: 2,800 MB
+   Stranded (<256MB): 354 MB  -> unusable by any CloudMatrix guest
+
+  --- WORST-FIT -----------------------------------------------------------
+   Guest VM                     Req (MB)   Hole  Left (MB)   Status
+   vm-web-01     (nginx tier)        850      5       5250   placed
+   vm-db-02      (PostgreSQL)       4096      5       1154   placed
+   vm-dns-03     (BIND9)             256      7       3944   placed
+   vm-batch-04   (Spark exec)       2900      7       1044   placed
+   vm-app-05     (ERP tier)         1400      1       2000   placed
+   vm-cache-06   (Redis)            1100      3       1700   placed
+   vm-analytics-07                  3300     --         --   REJECTED (no hole fits)
+   Holes after      : [1200, 2000, 512, 1700, 900, 1154, 1500, 1044]
+   Rejected         : 1   Free left: 10,010 MB   Largest hole: 2,000 MB
+   Stranded (<256MB): 0 MB  -> unusable by any CloudMatrix guest
+
+==============================================================================
+ CO3.2  COMPARISON
+==============================================================================
+   Policy        Placed  Rejected   Largest hole  Stranded MB   Verdict
+   First-Fit          7         0          2,004           94      best
+   Best-Fit           7         0          2,800          354          
+   Worst-Fit          6         1          2,000            0          
+
+   Reading of the result:
+   - Best-Fit leaves the smallest leftovers, which is exactly why it
+     manufactures slivers of memory too small to host any guest.
+   - Worst-Fit preserves large holes but consumes the big ones early,
+     so the last large request is the one that gets rejected.
+   - First-Fit is O(1) amortised in search cost and, on this workload,
+     places the same number of guests as Best-Fit. For a hypervisor
+     admitting VMs on a hot path, search cost is not free.
+
+==============================================================================
+ CO3.2  DYNAMIC LINKING / SHARED LIBRARY SAVING
+==============================================================================
+   Library                  Size (MB)   Static x1200 (MB)   Shared (MB)
+   libc.so.6                      2.1               2,520           2.1
+   libssl.so.3                    1.4               1,680           1.4
+   libcrypto.so.3                 4.8               5,760           4.8
+   libstdc++.so.6                 2.2               2,640           2.2
+   libpython3.12.so               6.4               7,680           6.4
+   TOTAL                         16.9              20,280          16.9
+   Saving = 19.8 GB of the 32 GB pool (99.92% of the library footprint).
+   Mechanism: the loader maps one physical copy of each .so into every
+   address space read-only/shared; only the writable GOT/PLT and .data
+   pages are private and copy-on-write. Statically linked guests would
+   need more RAM for libraries alone than the host physically has.
+
+==============================================================================
+ Completed in 0.000 s
+==============================================================================

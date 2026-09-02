@@ -1,0 +1,123 @@
+==============================================================================
+ CloudMatrix Operating Systems Assignment - CSA04 (CO3 / CO4 / CO5)
+ CO3.4  Working set, PFF control and the thrashing knee
+ Generated : 2026-09-02 06:08:08 UTC
+ Python    : 3.12.10 on Windows 11
+ Repository: https://github.com/tharuncoder676/OS-ASSIGNMENT
+==============================================================================
+
+==============================================================================
+ CO3.4  WORKING-SET MODEL - measured on a locality-structured trace
+==============================================================================
+   Trace length        : 60,000 sampled references over 64 distinct pages
+   True locality size  : 8 pages, drifting every 4,000 references
+
+     Window Delta    mean WSS    peak WSS   min WSS   Interpretation
+               10        5.89           8         1   too short - undercounts the locality
+               25        7.72          15         1   too short - undercounts the locality
+               50        8.02          15         1   tracks the true locality
+              100        8.09          16         1   tracks the true locality
+              250        8.24          16         1   tracks the true locality
+              500        8.51          16         1   too long - absorbs stale localities
+             1000        9.03          16         1   too long - absorbs stale localities
+
+   Delta = 50-250 is the usable operating band: WSS settles on the
+   generator's true locality of 8 pages. Too small a window starves the
+   process; too large a window keeps dead pages resident and wastes
+   frames that another guest needs. D = sum(WSS_i) computed with a
+   window in this band is the demand figure the allocator must respect.
+
+==============================================================================
+ CO3.4  LIFETIME CURVE p(f) - measured fault rate vs frames granted
+==============================================================================
+    Frames f  faults/ref p   CPU burst C (ms)   C vs D=8ms   Regime
+           2      0.748667              0.534        C < D   PAGING-BOUND
+           3      0.623283              0.642        C < D   PAGING-BOUND
+           4      0.498217              0.803        C < D   PAGING-BOUND
+           5      0.374183              1.069        C < D   PAGING-BOUND
+           6      0.249033              1.606        C < D   PAGING-BOUND
+           7      0.125167              3.196        C < D   PAGING-BOUND
+           8      0.001450            275.862        C > D   CPU-bound (healthy)
+          10      0.001200            333.333        C > D   CPU-bound (healthy)
+          12      0.001183            338.028        C > D   CPU-bound (healthy)
+          16      0.001183            338.028        C > D   CPU-bound (healthy)
+          24      0.001183            338.028        C > D   CPU-bound (healthy)
+          32      0.001183            338.028        C > D   CPU-bound (healthy)
+          48      0.001183            338.028        C > D   CPU-bound (healthy)
+          64      0.001067            375.000        C > D   CPU-bound (healthy)
+
+   The knee is at f = 8 frames, exactly the locality size. Below it the
+   process faults faster than the swap device can serve, and the paging
+   device -- not the CPU -- becomes the system bottleneck.
+
+==============================================================================
+ CO3.4  THRASHING - CPU utilisation as multiprogramming degree N rises
+==============================================================================
+   Partition = 64 frames, equal-share allocation f = M/N
+   Paging service D = 8.0 ms, one CPU, one paging device
+
+      N  f=M/N          p    C (ms)  X (jobs/ms)    U_cpu   U_disk   State
+      1     64   0.001067   375.000       0.0026    0.979    0.021   healthy
+      2     32   0.001183   338.028       0.0030    1.000    0.024   healthy
+      3     21   0.001183   338.028       0.0030    1.000    0.024   healthy
+      4     16   0.001183   338.028       0.0030    1.000    0.024   healthy
+      5     12   0.001183   338.028       0.0030    1.000    0.024   healthy
+      6     10   0.001200   333.333       0.0030    1.000    0.024   healthy
+      7      9   0.001300   307.692       0.0032    1.000    0.026   healthy
+      8      8   0.001450   275.862       0.0036    1.000    0.029   healthy
+      9      7   0.125167     3.196       0.1250    0.399    1.000   THRASHING
+     10      6   0.249033     1.606       0.1250    0.201    1.000   THRASHING
+     11      5   0.374183     1.069       0.1250    0.134    1.000   THRASHING
+     12      5   0.374183     1.069       0.1250    0.134    1.000   THRASHING
+     14      4   0.498217     0.803       0.1250    0.100    1.000   THRASHING
+     16      4   0.498217     0.803       0.1250    0.100    1.000   THRASHING
+     21      3   0.623283     0.642       0.1250    0.080    1.000   THRASHING
+     32      2   0.748667     0.534       0.1250    0.067    1.000   THRASHING
+
+   Utilisation holds at U = 1.000 up to N = 8 guests (f = 8 frames each), then collapses.
+   Past that point every additional guest LOWERS aggregate throughput:
+   U_disk pins at 1.000 while U_cpu collapses, which is the operational
+   signature of thrashing -- the machine is fully busy, but busy paging.
+   Admission control must therefore cap N at the knee, and the PFF
+   controller must enforce the cap dynamically as working sets grow.
+
+==============================================================================
+ CO3.4  FRAME ALLOCATION FOR THE 1,200-SESSION CloudMatrix MIX
+==============================================================================
+   Total frames (32 GB / 4 KB)   : 8,388,608
+   Hypervisor + page cache (10%) : 838,860
+   Available to guests  m        : 7,549,748  (28.80 GB)
+
+   Tier                            Guests  WSS (MB)    frames   tier demand      GB
+   Web / DNS microservice             900        16     4,096     3,686,400   14.06
+   Interactive enterprise app         240        48    12,288     2,949,120   11.25
+   Database guest VM                   40       192    49,152     1,966,080    7.50
+   Batch analytics worker              20       160    40,960       819,200    3.12
+   TOTAL DEMAND  D = sum WSS_i       1200                         9,420,800   35.94
+
+   D / m = 9,420,800 / 7,549,748 = 1.248   -> +24.8% over-committed
+   D > m, so the naive allocation thrashes. Three reclaim mechanisms
+   close the gap, in the order the controller should apply them:
+
+   1. KSM page sharing across 900 near-identical web guests (35%)   - 1,290,240 frames  (4.92 GB)
+   2. Balloon reclaim of cold pages in the enterprise tier (10%)   -   294,912 frames  (1.12 GB)
+   3. Suspend the batch analytics tier when PFF > upper threshold  -   819,200 frames  (3.12 GB)
+
+   Residual demand D' = 7,016,448 frames (26.77 GB)
+   D' / m = 0.929   -> 7.1% headroom  FITS
+
+   Resulting per-guest allocation rule (proportional + WS floor):
+     frames_i = max( WSS_i(Delta) , (size_i / sum size) * m )
+     subject to  sum frames_i <= m, batch tier suspendable
+
+   PFF control band (Denning; Wulf's page-fault-frequency scheme):
+     PFF_i > U = 0.50 faults/ms  ->  grant guest i more frames
+     PFF_i < L = 0.10 faults/ms  ->  balloon frames back from guest i
+     PFF_i > U and no free frame ->  SUSPEND lowest-priority guest
+   Batch analytics is the designated victim class: it carries no
+   interactive SLA, so suspending it protects the sub-10 ms response
+   time that Section D requires of the web/DNS and enterprise tiers.
+
+==============================================================================
+ Completed in 0.243 s
+==============================================================================

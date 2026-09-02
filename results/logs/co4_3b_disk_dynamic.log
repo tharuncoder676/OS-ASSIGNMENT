@@ -1,0 +1,80 @@
+==============================================================================
+ CloudMatrix Operating Systems Assignment - CSA04 (CO3 / CO4 / CO5)
+ CO4.3b Dynamic-arrival scheduling and load sensitivity
+ Generated : 2026-09-02 06:08:08 UTC
+ Python    : 3.12.10 on Windows 11
+ Repository: https://github.com/tharuncoder676/OS-ASSIGNMENT
+==============================================================================
+
+==============================================================================
+ CO4.3b  DYNAMIC-ARRIVAL DISK SCHEDULING EXPERIMENT
+==============================================================================
+   Requests            : 4,000 (3,386 hot / 614 cold)
+   Arrival span        : 7,258 ms (0.551 req/ms offered load)
+   Service model       : 0.5 ms settle + 0.01 ms/cyl + 0.6 ms transfer
+   RNG seed            : 192511416
+
+   Scheduler      Mean   Median      p95       p99        MAX   Total seek
+                  (ms)     (ms)     (ms)      (ms)       (ms)  (cylinders)
+   FCFS           44.6     24.0    118.1     124.3      133.9      266,623
+   SSTF            5.2      3.5     14.6      27.9       71.2      193,717
+   SCAN           12.3     10.8     27.0      36.7       54.6      254,927
+   C-SCAN         10.5      8.8     24.7      31.3       49.9      234,695
+   LOOK            6.0      4.3     16.2      23.7       40.3      193,217
+   C-LOOK          7.1      5.0     19.4      28.2       40.1      203,923
+
+==============================================================================
+ CO4.3b  TAIL LATENCY AND STARVATION OF THE COLD (far-edge) REQUESTS
+==============================================================================
+   Scheduler    Cold mean   Cold worst   Tail ratio   Fairness verdict
+                     (ms)         (ms)   (max/mean)
+   FCFS              46.4        133.9          3.0   bounded
+   SSTF               9.6         71.2         13.6   poor
+   SCAN              15.2         47.9          4.4   bounded
+   C-SCAN            11.7         49.9          4.7   bounded
+   LOOK               7.5         40.3          6.7   poor
+   C-LOOK             8.6         32.8          5.7   bounded
+
+   Best mean response time  : SSTF (5.2 ms)
+   Best p99 (SLA metric)    : LOOK (23.7 ms)
+   Best worst-case          : C-LOOK (40.1 ms)
+
+   This is the result the static 12-request queue cannot show. Under a
+   continuously refilled queue SSTF keeps the head inside the hot band
+   and defers the far-edge cold requests indefinitely, so its maximum
+   response time explodes even while its MEAN looks attractive. The
+   sweep-based schedulers bound the worst case by construction: a
+   request can wait at most one full sweep, which is why an SLA can
+   actually be written against them.
+
+   Section D requires sub-10 ms service under 90%+ load. Measured p99:
+     FCFS      p99 =   124.3 ms   FAILS
+     SSTF      p99 =    27.9 ms   FAILS
+     SCAN      p99 =    36.7 ms   FAILS
+     C-SCAN    p99 =    31.3 ms   FAILS
+     LOOK      p99 =    23.7 ms   FAILS
+     C-LOOK    p99 =    28.2 ms   FAILS
+
+==============================================================================
+ CO4.3c  LOAD SENSITIVITY - p99 response time vs offered load
+==============================================================================
+      Rate   Offered     FCFS     SSTF     SCAN   C-SCAN     LOOK   C-LOOK
+   (req/ms)      load   p99 ms   p99 ms   p99 ms   p99 ms   p99 ms   p99 ms
+      0.15      24%       8.1      7.4     15.9     15.0      7.6      8.3
+      0.25      40%      10.9      9.6     18.8     17.0      9.8     10.7
+      0.35      56%      14.8     12.1     24.0     20.4     12.7     14.6
+      0.45      72%      25.3     16.3     28.1     24.7     16.4     18.8
+      0.55      88%     122.7     29.9     40.0     32.6     23.1     27.9
+
+   Reading of the sweep: at light load every scheduler meets the 10 ms
+   target and the choice barely matters. The algorithms only separate
+   once the device saturates -- which is precisely the regime Section D
+   specifies. At the 90%+ load design point no single spindle meets a
+   10 ms p99 under ANY scheduling policy, so the honest engineering
+   conclusion is that scheduling alone is insufficient: the block tier
+   must be striped (RAID-10) or moved to NVMe, where the seek term
+   vanishes and the scheduler's job reduces to merging and fairness.
+
+==============================================================================
+ Completed in 0.155 s
+==============================================================================

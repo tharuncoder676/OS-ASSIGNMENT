@@ -1,0 +1,165 @@
+==============================================================================
+ CloudMatrix Operating Systems Assignment - CSA04 (CO3 / CO4 / CO5)
+ CO4.1  Contiguous / Linked / Indexed / Extent allocation
+ Generated : 2026-09-02 06:08:08 UTC
+ Python    : 3.12.10 on Windows 11
+ Repository: https://github.com/tharuncoder676/OS-ASSIGNMENT
+==============================================================================
+
+==============================================================================
+ CO4.1  FILE ALLOCATION - CloudMatrix representative file set
+==============================================================================
+   Device       : 500 blocks x 4 KB = 1.95 MB
+   Pointers/block: 1024
+
+   File                        Size (B)  Blocks  Tail waste (B)   Access
+   named.conf                     2,100       1           1,996   random
+   dhcpd.conf                     3,400       1             696   random
+   syslog-2026-09.log           163,840      40               0   sequential
+   nginx-access.log             245,760      60               0   sequential
+   tenant-db.dump               389,120      95               0   random
+   guest-win11.vmdk             491,520     120               0   sequential
+   guest-ubuntu.img             368,640      90               0   sequential
+   backup-snapshot.tar          286,720      70               0   sequential
+   TOTAL                      1,951,100     477           2,692
+
+  --- Contiguous allocation ------------------------------------------------
+   File                      Blk    Status   Block map / metadata
+   named.conf                  1        OK   0
+   dhcpd.conf                  1        OK   1
+   syslog-2026-09.log         40        OK   2-41
+   nginx-access.log           60        OK   42-101
+   tenant-db.dump             95        OK   102-196
+   guest-win11.vmdk          120        OK   197-316
+   guest-ubuntu.img           90        OK   317-406
+   backup-snapshot.tar        70        OK   407-476
+   Files placed 8/8   data blocks 477   metadata blocks 0   used 477   free 23
+
+  --- Linked allocation ----------------------------------------------------
+   File                      Blk    Status   Block map / metadata
+   named.conf                  1        OK   0
+   dhcpd.conf                  1        OK   1
+   syslog-2026-09.log         40        OK   2-41
+   nginx-access.log           60        OK   42-101
+   tenant-db.dump             95        OK   102-196
+   guest-win11.vmdk          120        OK   197-316
+   guest-ubuntu.img           90        OK   317-406
+   backup-snapshot.tar        70        OK   407-476
+   Files placed 8/8   data blocks 477   metadata blocks 0   used 477   free 23
+
+  --- Indexed allocation ---------------------------------------------------
+   File                      Blk    Status   Block map / metadata
+   named.conf                  1        OK   idx 0 -> 1
+   dhcpd.conf                  1        OK   idx 2 -> 3
+   syslog-2026-09.log         40        OK   idx 4 -> 5-44
+   nginx-access.log           60        OK   idx 45 -> 46-105
+   tenant-db.dump             95        OK   idx 106 -> 107-201
+   guest-win11.vmdk          120        OK   idx 202 -> 203-322
+   guest-ubuntu.img           90        OK   idx 323 -> 324-413
+   backup-snapshot.tar        70        OK   idx 414 -> 415-484
+   Files placed 8/8   data blocks 477   metadata blocks 8   used 485   free 15
+
+  --- Extent (ext4-style) allocation ---------------------------------------
+   File                      Blk    Status   Block map / metadata
+   named.conf                  1        OK   0
+   dhcpd.conf                  1        OK   1
+   syslog-2026-09.log         40        OK   2-41
+   nginx-access.log           60        OK   42-101
+   tenant-db.dump             95        OK   102-196
+   guest-win11.vmdk          120        OK   197-316
+   guest-ubuntu.img           90        OK   317-406
+   backup-snapshot.tar        70        OK   407-476
+   Files placed 8/8   data blocks 477   metadata blocks 0   used 477   free 23
+
+==============================================================================
+ CO4.1  ALLOCATION SUMMARY
+==============================================================================
+   Method                  Placed   Used   Free   Util %   Meta (B)  Internal (B)
+   Contiguous                   8    477     23     95.4          0         2,692
+   Linked                       8    477     23     95.4      1,908         2,692
+   Indexed                      8    485     15     97.0     32,768         2,692
+   Extent (ext4-style)          8    477     23     95.4          0         2,692
+
+   Internal fragmentation is identical for every method (it is a
+   property of the block size, not the allocator). Metadata overhead
+   is where the methods genuinely differ.
+
+==============================================================================
+ CO4.2  ACCESS COST - block I/Os for sequential vs random reads
+==============================================================================
+
+   nginx-access.log  (60 blocks, sequential-access workload)
+   Method                   Sequential I/Os   Random I/Os   Random penalty
+   Contiguous                            60            15             1.0x
+   Linked                                60           435            29.0x
+   Indexed                               61            16             1.1x
+   Extent (ext4-style)                   60            15             1.0x
+
+   tenant-db.dump  (95 blocks, random-access workload)
+   Method                   Sequential I/Os   Random I/Os   Random penalty
+   Contiguous                            95            23             1.0x
+   Linked                                95         1,035            45.0x
+   Indexed                               96            24             1.0x
+   Extent (ext4-style)                   95            23             1.0x
+
+   Linked allocation is the outlier by two orders of magnitude on
+   random access, because reaching block i costs i pointer hops and
+   there is no way to shortcut the chain. For tenant-db.dump this is
+   the difference between 23 I/Os and 1,035 -- a 45x penalty.
+
+==============================================================================
+ CO4.2  EXTERNAL FRAGMENTATION UNDER CREATE/DELETE CHURN
+==============================================================================
+   Free-space map after the initial contiguous allocation
+   ('#' = allocated, '.' = free)
+      0| ####################################################################################################
+    100| ####################################################################################################
+    200| ####################################################################################################
+    300| ####################################################################################################
+    400| #############################################################################.......................
+   Free 23 blocks, largest run 23, external fragmentation 0.000
+
+   After deleting syslog-2026-09.log, tenant-db.dump, guest-ubuntu.img:
+      0| ##........................................##########################################################
+    100| ##...............................................................................................###
+    200| ####################################################################################################
+    300| #################...................................................................................
+    400| .......######################################################################.......................
+   Free 248 blocks, largest run 95, external fragmentation 0.617
+   Free extents: [(2, 40), (102, 95), (317, 90), (477, 23)]
+
+   Now create rebuild-2026.vmdk requiring 150 blocks:
+     Contiguous            FAILED     REFUSED: needs 150 contiguous, largest run is 95
+     Linked                ALLOCATED  head=2, tail=331, 150 next-pointers (600 B stolen from data)
+     Indexed               ALLOCATED  index block(s)=[4], 150 data blocks
+     Extent (ext4-style)   ALLOCATED  2 extent(s): [102..196], [317..371]
+
+   The disk holds 248 free blocks -- comfortably more
+   than the 150 requested -- yet contiguous allocation
+   refuses the request because no single run is large enough. That is
+   external fragmentation stated as a measurement rather than a
+   definition, and it is the failure mode that rules contiguous
+   allocation out for a platform with constant VM churn.
+
+==============================================================================
+ CO4.1  RECOMMENDATION BY FILE CLASS
+==============================================================================
+
+   (a) Config files  < 4 KB
+     examples       : named.conf, dhcpd.conf, resolv.conf
+     RECOMMENDATION : Inline / direct blocks in the inode
+     justification  : One block, one I/O. Indexing costs a whole extra 4 KB block for a 2 KB file -- 200% overhead. Modern ext4 inlines such files in the inode's 60-byte i_block area, so the read costs zero data I/Os.
+
+   (b) Web logs 10-100 MB
+     examples       : nginx-access.log, syslog
+     RECOMMENDATION : Indexed (single + double indirect)
+     justification  : Append-heavy and read sequentially, but occasionally grepped at random offsets. Indexed gives O(1) random reach for ~0.1% metadata overhead, and the file grows without needing contiguous space.
+
+   (c) VM images  > 50 GB
+     examples       : guest-win11.vmdk, guest-ubuntu.img
+     RECOMMENDATION : Extent-based (ext4/XFS extents)
+     justification  : A 50 GB file is 13,107,200 blocks; a classical index would need 12,814 metadata blocks. Four extents describe the same file in 48 bytes inside the inode, and keep the physical layout sequential for streaming reads.
+
+==============================================================================
+ Completed in 0.002 s
+==============================================================================

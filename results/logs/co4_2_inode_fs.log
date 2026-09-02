@@ -1,0 +1,168 @@
+==============================================================================
+ CloudMatrix Operating Systems Assignment - CSA04 (CO3 / CO4 / CO5)
+ CO4.2  Inode dynamics, kernel calls, buffer cache
+ Generated : 2026-09-02 06:08:08 UTC
+ Python    : 3.12.10 on Windows 11
+ Repository: https://github.com/tharuncoder676/OS-ASSIGNMENT
+==============================================================================
+
+==============================================================================
+ CO4.2  UNIX INODE STRUCTURE AND ADDRESSING REACH
+==============================================================================
+   Block size 4096 B, pointer 4 B -> 1024 pointers per indirect block
+
+   Pointer tier              Blocks reachable             Bytes  Reads to fetch
+   10 direct                               10             40 KB               1
+   1 single indirect                    1,024          4.000 MB               2
+   1 double indirect                1,048,576          4.000 GB               3
+   1 triple indirect            1,073,741,824          4.000 TB               4
+   MAXIMUM FILE SIZE            1,074,791,434          4.004 TB
+
+   The asymmetry is the whole point of the design: 99.99% of files in
+   a real system fit inside the 10 direct pointers and cost exactly
+   one disk read, while the rare huge file is still addressable, at a
+   worst case of 4 reads per block.
+
+==============================================================================
+ CO4.2  bmap() - which pointer tier serves a given logical block?
+==============================================================================
+     Logical block       File offset                  Tier   Disk reads
+                 0              0 KB                direct            1
+                 9             36 KB                direct            1
+                10             40 KB       single indirect            2
+             1,033           4.04 MB       single indirect            2
+             1,034           4.04 MB       double indirect            3
+         1,049,610           4.00 GB       triple indirect            4
+         1,049,700           4.00 GB       triple indirect            4
+        13,107,199          50.00 GB       triple indirect            4
+
+==============================================================================
+ CO4.2  METADATA COST OF A 50 GB VM DISK IMAGE (guest-win11.vmdk)
+==============================================================================
+   named.conf (2 KB)           data            1 blocks   indirect        0 blocks   overhead  0.000%
+   nginx-access.log (80 MB)    data       20,480 blocks   indirect       21 blocks   overhead  0.103%
+   guest-ubuntu.img (8 GB)     data    2,097,152 blocks   indirect    2,051 blocks   overhead  0.098%
+   guest-win11.vmdk (50 GB)    data   13,107,200 blocks   indirect   12,814 blocks   overhead  0.098%
+
+   A 50 GB image needs 12,814 indirect blocks -- 50 MB of pure pointer
+   metadata that must itself be cached, and up to 4 disk reads to
+   reach one data block on a cold cache. This is precisely why ext4
+   replaced the indirect chain with extents for large files: a single
+   12-byte extent descriptor covers up to 128 MB contiguously.
+
+==============================================================================
+ CO4.2  KERNEL SYSTEM-CALL TRACE - guest VM create / delete cycle
+==============================================================================
+
+   PHASE 1 - build /var/lib/cloudmatrix and create the guest image
+   --------------------------------------------------------------------
+     ialloc()     super-block free-inode cache empty -> scan #1 refilled with [2, 3, 4, 5]
+     ialloc()     inode 2 taken from cache, type=directory, uid=0, mode=0o755; cache now [3, 4, 5]
+     mkdir        'var' -> inode 2 linked into inode 1
+     ialloc()     inode 3 taken from cache, type=directory, uid=0, mode=0o755; cache now [4, 5]
+     mkdir        'lib' -> inode 3 linked into inode 2
+     ialloc()     inode 4 taken from cache, type=directory, uid=1001, mode=0o755; cache now [5]
+     mkdir        'cloudmatrix' -> inode 4 linked into inode 3
+     ialloc()     inode 5 taken from cache, type=regular, uid=1001, mode=0o600; cache now []
+     alloc()      free list -> block 0 removed, 511 free remain
+     alloc()      free list -> block 1 removed, 510 free remain
+     alloc()      free list -> block 2 removed, 509 free remain
+     alloc()      free list -> block 3 removed, 508 free remain
+     alloc()      free list -> block 4 removed, 507 free remain
+     alloc()      free list -> block 5 removed, 506 free remain
+     alloc()      free list -> block 6 removed, 505 free remain
+     alloc()      free list -> block 7 removed, 504 free remain
+     alloc()      free list -> block 8 removed, 503 free remain
+     alloc()      free list -> block 9 removed, 502 free remain
+     alloc()      free list -> block 10 removed, 501 free remain
+     create       logical block 10 exceeds the 10 direct pointers -> block 10 allocated as the SINGLE INDIRECT block
+     alloc()      free list -> block 11 removed, 500 free remain
+     alloc()      free list -> block 12 removed, 499 free remain
+     alloc()      free list -> block 13 removed, 498 free remain
+     alloc()      free list -> block 14 removed, 497 free remain
+     create       'guest-tenant7.img' -> inode 5, 14 blocks, size 57,344 B, linked into inode 4
+     ialloc()     super-block free-inode cache empty -> scan #2 refilled with [6, 7, 8, 9]
+     ialloc()     inode 6 taken from cache, type=regular, uid=1001, mode=0o644; cache now [7, 8, 9]
+     alloc()      free list -> block 15 removed, 496 free remain
+     create       'guest-tenant7.cfg' -> inode 6, 1 blocks, size 4,096 B, linked into inode 4
+
+   PHASE 2 - namei() resolution of the guest image path
+   --------------------------------------------------------------------
+     namei()      resolving '/var/lib/cloudmatrix/guest-tenant7.img' - start at root inode 1
+     namei()      component 'var' found in directory inode 1 -> inode 2
+     namei()      component 'lib' found in directory inode 2 -> inode 3
+     namei()      component 'cloudmatrix' found in directory inode 3 -> inode 4
+     namei()      component 'guest-tenant7.img' found in directory inode 4 -> inode 5
+     namei()      resolved '/var/lib/cloudmatrix/guest-tenant7.img' -> inode 5
+     RESULT       inode 5, size 57,344 B, uid 1001, mode 0o600, links 1
+     direct[]   = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+     single     = 10   (block 11 onwards needs it)
+     namei() cost: 4 directory reads + 1 inode read = 5 I/Os cold,
+     1 I/O warm -- which is exactly what the dentry/inode cache is for.
+
+   PHASE 3 - tenant offboarding: unlink the guest, watch ifree/free
+   --------------------------------------------------------------------
+     unlink       'guest-tenant7.img' removed from directory inode 4; inode 5 link count -> 0
+     unlink       link count reached 0 -> calling ifree(5)
+     free()       block 0 returned to free list, 497 free
+     free()       block 1 returned to free list, 498 free
+     free()       block 2 returned to free list, 499 free
+     free()       block 3 returned to free list, 500 free
+     free()       block 4 returned to free list, 501 free
+     free()       block 5 returned to free list, 502 free
+     free()       block 6 returned to free list, 503 free
+     free()       block 7 returned to free list, 504 free
+     free()       block 8 returned to free list, 505 free
+     free()       block 9 returned to free list, 506 free
+     free()       block 11 returned to free list, 507 free
+     free()       block 12 returned to free list, 508 free
+     free()       block 13 returned to free list, 509 free
+     free()       block 14 returned to free list, 510 free
+     free()       block 10 returned to free list, 511 free
+     ifree()      inode 5 released, returned to super-block cache [7, 8, 9, 5]
+     Free blocks 496 -> 511 (15 reclaimed)
+
+   PHASE 4 - a failed lookup, proving namei() reports ENOENT safely
+   --------------------------------------------------------------------
+     namei()      resolving '/var/lib/cloudmatrix/guest-tenant7.img' - start at root inode 1
+     namei()      component 'var' found in directory inode 1 -> inode 2
+     namei()      component 'lib' found in directory inode 2 -> inode 3
+     namei()      component 'cloudmatrix' found in directory inode 3 -> inode 4
+     namei()      component 'guest-tenant7.img' NOT FOUND in inode 4 -> ENOENT
+     RESULT       None - the block map is gone and the inode
+                  is back on the free list; no stale pointer survives.
+
+==============================================================================
+ CO4.2  BUFFER CACHE HIT RATIO (LRU, delayed write)
+==============================================================================
+   Trace: 20,000 operations (16,385 reads / 3,615 writes)
+   Working sets: metadata 32 blocks, directories 128 blocks,
+                 log 241 blocks, VM streaming 59,000 blocks
+
+     Cache size   Cache MB      Hits    Misses   Hit ratio   Disk writes
+             16       0.06     1,721    18,279      8.61%         3,564
+             32       0.12     3,256    16,744     16.28%         3,516
+             64       0.25     5,730    14,270     28.65%         3,414
+            128       0.50     8,708    11,292     43.54%         3,188
+            256       1.00    11,310     8,690     56.55%         2,586
+            512       2.00    13,696     6,304     68.48%         1,583
+           1024       4.00    15,389     4,611     76.94%           469
+           2048       8.00    15,671     4,329     78.35%           243
+
+   Reading of the curve: 80% of operations touch a hot set of only
+   401 blocks (metadata + directories + the log tail), and 20% stream
+   the 59,000-block VM image region, which no realistic cache can hold.
+   The achievable ceiling is therefore about 80%, and 1,024 buffers
+   (4 MB) already reach 76.9% -- 96% of everything available. Doubling
+   the cache again buys 1.4 more percentage points for another 4 MB.
+   The right fix is not a bigger cache but O_DIRECT on VM image I/O,
+   so streaming traffic stops evicting the metadata that caches well.
+
+   Note the write column: delayed write means a block modified many
+   times reaches the platter once, but any block still dirty at a
+   crash is lost. That is the reliability/performance trade-off that
+   fsync() and the journal exist to arbitrate.
+
+==============================================================================
+ Completed in 0.056 s
+==============================================================================

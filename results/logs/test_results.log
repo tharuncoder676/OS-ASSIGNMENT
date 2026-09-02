@@ -1,0 +1,90 @@
+==============================================================================
+ CloudMatrix Operating Systems Assignment - CSA04 (CO3 / CO4 / CO5)
+ Validation test suite (unittest)
+ Generated : 2026-09-02 06:08:12 UTC
+ Python    : 3.12.10 on Windows 11
+ Repository: https://github.com/tharuncoder676/OS-ASSIGNMENT
+==============================================================================
+
+test_average_seek_is_total_over_count (test_simulators.TestDiskScheduling.test_average_seek_is_total_over_count) ... ok
+test_empty_and_single_request_queues (test_simulators.TestDiskScheduling.test_empty_and_single_request_queues)
+Edge cases the report does not show but the code must survive. ... ok
+test_every_request_is_served_exactly_once (test_simulators.TestDiskScheduling.test_every_request_is_served_exactly_once) ... ok
+test_fcfs_preserves_arrival_order (test_simulators.TestDiskScheduling.test_fcfs_preserves_arrival_order) ... ok
+test_look_never_exceeds_scan (test_simulators.TestDiskScheduling.test_look_never_exceeds_scan)
+LOOK is SCAN without the trip to the platter edge, so it can never ... ok
+test_path_starts_at_the_head (test_simulators.TestDiskScheduling.test_path_starts_at_the_head) ... ok
+test_path_stays_within_the_platter (test_simulators.TestDiskScheduling.test_path_stays_within_the_platter) ... ok
+test_scan_reaches_the_platter_edge (test_simulators.TestDiskScheduling.test_scan_reaches_the_platter_edge) ... ok
+test_sstf_is_a_lower_bound_among_greedy_choices (test_simulators.TestDiskScheduling.test_sstf_is_a_lower_bound_among_greedy_choices)
+SSTF must never move further than FCFS on this queue. ... ok
+test_totals_match_hand_calculation (test_simulators.TestDiskScheduling.test_totals_match_hand_calculation) ... ok
+test_best_fit_picks_the_tightest_hole (test_simulators.TestDynamicAllocation.test_best_fit_picks_the_tightest_hole) ... ok
+test_first_fit_picks_the_lowest_address (test_simulators.TestDynamicAllocation.test_first_fit_picks_the_lowest_address) ... ok
+test_memory_is_conserved (test_simulators.TestDynamicAllocation.test_memory_is_conserved) ... ok
+test_no_hole_goes_negative (test_simulators.TestDynamicAllocation.test_no_hole_goes_negative) ... ok
+test_placement_always_fits_the_chosen_hole (test_simulators.TestDynamicAllocation.test_placement_always_fits_the_chosen_hole) ... ok
+test_worst_fit_picks_the_largest_hole (test_simulators.TestDynamicAllocation.test_worst_fit_picks_the_largest_hole) ... ok
+test_worst_fit_rejects_the_large_request (test_simulators.TestDynamicAllocation.test_worst_fit_rejects_the_large_request)
+The reported finding: Worst-Fit is the only policy that fails. ... ok
+test_allocated_blocks_are_marked_used (test_simulators.TestFileAllocation.test_allocated_blocks_are_marked_used) ... ok
+test_allocation_is_refused_when_it_cannot_be_honoured (test_simulators.TestFileAllocation.test_allocation_is_refused_when_it_cannot_be_honoured)
+Section D reliability requirement: the system must correctly report ... ok
+test_block_accounting_balances (test_simulators.TestFileAllocation.test_block_accounting_balances) ... ok
+test_contiguous_blocks_really_are_contiguous (test_simulators.TestFileAllocation.test_contiguous_blocks_really_are_contiguous) ... ok
+test_deallocation_returns_every_block (test_simulators.TestFileAllocation.test_deallocation_returns_every_block) ... ok
+test_direct_access_methods_cost_one_io_per_block (test_simulators.TestFileAllocation.test_direct_access_methods_cost_one_io_per_block) ... ok
+test_external_fragmentation_defeats_contiguous_only (test_simulators.TestFileAllocation.test_external_fragmentation_defeats_contiguous_only)
+The headline result: after deletions, contiguous fails while the ... ok
+test_indexed_allocation_reserves_an_index_block (test_simulators.TestFileAllocation.test_indexed_allocation_reserves_an_index_block) ... ok
+test_linked_random_access_is_quadratic (test_simulators.TestFileAllocation.test_linked_random_access_is_quadratic)
+The reported 45x penalty is a property of chain traversal. ... ok
+test_no_two_files_share_a_block (test_simulators.TestFileAllocation.test_no_two_files_share_a_block) ... ok
+test_50gb_metadata_cost (test_simulators.TestInodeFS.test_50gb_metadata_cost) ... ok
+test_alloc_never_hands_out_the_same_block_twice (test_simulators.TestInodeFS.test_alloc_never_hands_out_the_same_block_twice) ... ok
+test_bmap_tier_boundaries (test_simulators.TestInodeFS.test_bmap_tier_boundaries) ... ok
+test_buffer_cache_hit_ratio_is_monotonic_in_size (test_simulators.TestInodeFS.test_buffer_cache_hit_ratio_is_monotonic_in_size) ... ok
+test_buffer_cache_never_exceeds_capacity (test_simulators.TestInodeFS.test_buffer_cache_never_exceeds_capacity) ... ok
+test_ialloc_never_hands_out_the_same_inode_twice (test_simulators.TestInodeFS.test_ialloc_never_hands_out_the_same_inode_twice) ... ok
+test_ifree_returns_the_inode_to_the_free_pool (test_simulators.TestInodeFS.test_ifree_returns_the_inode_to_the_free_pool) ... ok
+test_maximum_file_size (test_simulators.TestInodeFS.test_maximum_file_size) ... ok
+test_namei_resolves_and_reports_enoent (test_simulators.TestInodeFS.test_namei_resolves_and_reports_enoent) ... ok
+test_small_file_needs_no_indirect_block (test_simulators.TestInodeFS.test_small_file_needs_no_indirect_block) ... ok
+test_sync_flushes_every_dirty_buffer (test_simulators.TestInodeFS.test_sync_flushes_every_dirty_buffer) ... ok
+test_unlink_reclaims_every_block (test_simulators.TestInodeFS.test_unlink_reclaims_every_block) ... ok
+test_address_widths (test_simulators.TestMemoryGeometry.test_address_widths) ... ok
+test_inner_table_occupies_exactly_one_frame (test_simulators.TestMemoryGeometry.test_inner_table_occupies_exactly_one_frame) ... ok
+test_physical_frames (test_simulators.TestMemoryGeometry.test_physical_frames) ... ok
+test_sparse_table_is_cheaper_than_flat (test_simulators.TestMemoryGeometry.test_sparse_table_is_cheaper_than_flat) ... ok
+test_two_level_split_sums_to_page_number (test_simulators.TestMemoryGeometry.test_two_level_split_sums_to_page_number) ... ok
+test_virtual_pages (test_simulators.TestMemoryGeometry.test_virtual_pages) ... ok
+test_belady_anomaly_is_present_for_fifo (test_simulators.TestPageReplacement.test_belady_anomaly_is_present_for_fifo) ... ok
+test_enough_frames_means_only_compulsory_faults (test_simulators.TestPageReplacement.test_enough_frames_means_only_compulsory_faults) ... ok
+test_faults_never_below_distinct_pages (test_simulators.TestPageReplacement.test_faults_never_below_distinct_pages)
+Compulsory faults: every distinct page must be brought in once. ... ok
+test_hand_computed_fault_counts (test_simulators.TestPageReplacement.test_hand_computed_fault_counts)
+These six numbers are the ones the report tabulates. ... ok
+test_hits_and_faults_sum_to_trace_length (test_simulators.TestPageReplacement.test_hits_and_faults_sum_to_trace_length) ... ok
+test_optimal_is_a_lower_bound (test_simulators.TestPageReplacement.test_optimal_is_a_lower_bound)
+No online algorithm can beat OPT. If one does, OPT is wrong. ... ok
+test_stack_algorithms_never_regress (test_simulators.TestPageReplacement.test_stack_algorithms_never_regress)
+LRU and OPT satisfy the inclusion property, so more frames can ... ok
+test_all_modules_execute (test_simulators.TestReportedFiguresAreReproducible.test_all_modules_execute) ... ok
+test_distinct_pages_get_distinct_frames (test_simulators.TestTranslation.test_distinct_pages_get_distinct_frames) ... ok
+test_eat_between_hit_and_miss_cost (test_simulators.TestTranslation.test_eat_between_hit_and_miss_cost) ... ok
+test_offset_is_preserved_by_translation (test_simulators.TestTranslation.test_offset_is_preserved_by_translation) ... ok
+test_same_page_maps_to_same_frame (test_simulators.TestTranslation.test_same_page_maps_to_same_frame) ... ok
+test_split_reassembles (test_simulators.TestTranslation.test_split_reassembles) ... ok
+test_tlb_never_exceeds_capacity (test_simulators.TestTranslation.test_tlb_never_exceeds_capacity) ... ok
+test_fault_rate_falls_as_frames_are_added (test_simulators.TestWorkingSet.test_fault_rate_falls_as_frames_are_added) ... ok
+test_fault_rate_is_a_probability (test_simulators.TestWorkingSet.test_fault_rate_is_a_probability) ... ok
+test_thrashing_occurs_past_the_knee (test_simulators.TestWorkingSet.test_thrashing_occurs_past_the_knee)
+Utilisation at N=16 must be materially worse than at the knee. ... ok
+test_utilisation_is_bounded (test_simulators.TestWorkingSet.test_utilisation_is_bounded) ... ok
+test_working_set_never_exceeds_the_window (test_simulators.TestWorkingSet.test_working_set_never_exceeds_the_window) ... ok
+test_working_set_size_grows_with_the_window (test_simulators.TestWorkingSet.test_working_set_size_grows_with_the_window) ... ok
+
+----------------------------------------------------------------------
+Ran 65 tests in 0.513s
+
+OK

@@ -1,0 +1,121 @@
+==============================================================================
+ CloudMatrix Operating Systems Assignment - CSA04 (CO3 / CO4 / CO5)
+ CO4.3  FCFS / SSTF / SCAN / C-SCAN / LOOK / C-LOOK
+ Generated : 2026-09-02 06:08:08 UTC
+ Python    : 3.12.10 on Windows 11
+ Repository: https://github.com/tharuncoder676/OS-ASSIGNMENT
+==============================================================================
+
+==============================================================================
+ CO4.3  DISK HEAD MOVEMENT - CloudMatrix 500-cylinder block store
+==============================================================================
+   Cylinder range   : 0 - 499
+   Pending queue    : [86, 147, 312, 91, 177, 48, 409, 22, 130, 365, 220, 480]
+   Requests         : 12
+   Initial head     : cylinder 125, moving towards higher cylinders
+   Seek model       : t = 0.5 ms settle + 0.01 ms per cylinder
+
+  --- FCFS ------------------------------------------------------------------
+   Service order :
+     125 -> 86 -> 147 -> 312 -> 91 -> 177 -> 48 -> 409 -> 22 -> 130 -> 365 -> 220 -> 480
+   Head movement : 39 + 61 + 165 + 221 + 86 + 129 + 361 + 387 + 108 + 235 + 145 + 260
+                 = 2197 cylinders
+   Average seek  : 2197 / 12 = 183.08 cylinders per request
+   Seek time     : 27.97 ms total, 2.331 ms per request
+   Worst wait    : cylinder 480 served after 2197 cylinders of travel
+
+  --- SSTF ------------------------------------------------------------------
+   Service order :
+     125 -> 130 -> 147 -> 177 -> 220 -> 312 -> 365 -> 409 -> 480 -> 91 -> 86 -> 48 -> 22
+   Head movement : 5 + 17 + 30 + 43 + 92 + 53 + 44 + 71 + 389 + 5 + 38 + 26
+                 = 813 cylinders
+   Average seek  : 813 / 12 = 67.75 cylinders per request
+   Seek time     : 14.13 ms total, 1.177 ms per request
+   Worst wait    : cylinder 22 served after 813 cylinders of travel
+
+  --- SCAN ------------------------------------------------------------------
+   Service order :
+     125 -> 130 -> 147 -> 177 -> 220 -> 312 -> 365 -> 409 -> 480 -> 499 -> 91 -> 86 -> 48 -> 22
+   Head movement : 5 + 17 + 30 + 43 + 92 + 53 + 44 + 71 + 19 + 408 + 5 + 38 + 26
+                 = 851 cylinders
+   Average seek  : 851 / 12 = 70.92 cylinders per request
+   Seek time     : 15.01 ms total, 1.251 ms per request
+   Worst wait    : cylinder 22 served after 851 cylinders of travel
+
+  --- C-SCAN ----------------------------------------------------------------
+   Service order :
+     125 -> 130 -> 147 -> 177 -> 220 -> 312 -> 365 -> 409 -> 480 -> 499 -> 0 -> 22 -> 48 -> 86 -> 91
+   Head movement : 5 + 17 + 30 + 43 + 92 + 53 + 44 + 71 + 19 + 499 + 22 + 26 + 38 + 5
+                 = 964 cylinders
+   Average seek  : 964 / 12 = 80.33 cylinders per request
+   Seek time     : 16.64 ms total, 1.387 ms per request
+   Worst wait    : cylinder 91 served after 964 cylinders of travel
+
+  --- LOOK ------------------------------------------------------------------
+   Service order :
+     125 -> 130 -> 147 -> 177 -> 220 -> 312 -> 365 -> 409 -> 480 -> 91 -> 86 -> 48 -> 22
+   Head movement : 5 + 17 + 30 + 43 + 92 + 53 + 44 + 71 + 389 + 5 + 38 + 26
+                 = 813 cylinders
+   Average seek  : 813 / 12 = 67.75 cylinders per request
+   Seek time     : 14.13 ms total, 1.177 ms per request
+   Worst wait    : cylinder 22 served after 813 cylinders of travel
+
+  --- C-LOOK ----------------------------------------------------------------
+   Service order :
+     125 -> 130 -> 147 -> 177 -> 220 -> 312 -> 365 -> 409 -> 480 -> 22 -> 48 -> 86 -> 91
+   Head movement : 5 + 17 + 30 + 43 + 92 + 53 + 44 + 71 + 458 + 26 + 38 + 5
+                 = 882 cylinders
+   Average seek  : 882 / 12 = 73.50 cylinders per request
+   Seek time     : 14.82 ms total, 1.235 ms per request
+   Worst wait    : cylinder 91 served after 882 cylinders of travel
+
+==============================================================================
+ CO4.3  COMPARATIVE SUMMARY
+==============================================================================
+   Algorithm   Total move   Avg seek   Seek time  Worst wait   vs FCFS
+              (cylinders)  (cyl/req)        (ms) (cylinders)          
+   FCFS              2197     183.08       27.97        2197      0.0%
+   SSTF               813      67.75       14.13         813     63.0%
+   SCAN               851      70.92       15.01         851     61.3%
+   C-SCAN             964      80.33       16.64         964     56.1%
+   LOOK               813      67.75       14.13         813     63.0%
+   C-LOOK             882      73.50       14.82         882     59.9%
+
+   Lowest total head movement : SSTF (813 cylinders)
+   Lowest worst-case wait     : SSTF (813 cylinders)
+
+==============================================================================
+ CO4.3  STARVATION / FAIRNESS PROFILE
+==============================================================================
+   Distance the head travels before each request is served:
+   Cylinder       FCFS     SSTF     SCAN   C-SCAN     LOOK   C-LOOK
+   22             1449      813      851      895      813      813
+   48              701      787      825      921      787      839
+   86               39      749      787      959      749      877
+   91              486      744      782      964      744      882
+   130            1557        5        5        5        5        5
+   147             100       22       22       22       22       22
+   177             572       52       52       52       52       52
+   220            1937       95       95       95       95       95
+   312             265      187      187      187      187      187
+   365            1792      240      240      240      240      240
+   409            1062      284      284      284      284      284
+   480            2197      355      355      355      355      355
+
+   Wait spread (max - min), a direct proxy for unfairness:
+     SSTF           808 cylinders
+     LOOK           808 cylinders
+     SCAN           846 cylinders
+     C-LOOK         877 cylinders
+     C-SCAN         959 cylinders
+     FCFS          2158 cylinders
+
+   SSTF's low total movement is bought by leaving cylinder 22 and 48
+   unserved until the very end of the sweep -- the classic SSTF
+   starvation signature. Under a continuously refilled CloudMatrix
+   queue those far-edge requests may never be served at all, because
+   SSTF has no mechanism that guarantees forward progress.
+
+==============================================================================
+ Completed in 0.000 s
+==============================================================================
