@@ -13,6 +13,22 @@
 
 ---
 
+## The report
+
+The full assignment report (43 pages, 10 figures, 43 tables) is in this repository:
+
+- **[CSA04_OS_Assignment_CO3_CO4_CO5_Tharunkumar_S_192511416.docx](docs/CSA04_OS_Assignment_CO3_CO4_CO5_Tharunkumar_S_192511416.docx)** — Word
+- **[CSA04_OS_Assignment_CO3_CO4_CO5_Tharunkumar_S_192511416.pdf](docs/CSA04_OS_Assignment_CO3_CO4_CO5_Tharunkumar_S_192511416.pdf)** — PDF
+- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** — integrated architecture, diagrams and decision matrices
+
+It is itself generated from this repository: `python tools/build_report_twopass.py`
+rebuilds it, pulling every figure and evidence image from `results/` and
+`screenshots/`, and measuring the real page numbers for the contents page in a
+second pass. The report therefore cannot quote a number the code does not
+produce.
+
+---
+
 ## What this repository is
 
 CloudMatrix is a hypothetical enterprise virtualization host: 32 GB of RAM, a 500-cylinder
