@@ -1,0 +1,78 @@
+==============================================================================
+ CloudMatrix - CO5 configuration and script validation
+ Host: MINGW64_NT-10.0-26200 3.6.9-b4195d69.x86_64   bash 5.3.15
+ Date: 2026-09-02 06:33:42 UTC
+==============================================================================
+
+== bash -n : POSIX shell syntax validation of the administration scripts ==
+  [ OK ]  src/co5_linux/scripts/cm-backup.sh                   syntax clean
+  [ OK ]  src/co5_linux/scripts/cm-healthcheck.sh              syntax clean
+  [ OK ]  src/co5_linux/scripts/cm-usermgmt.sh                 syntax clean
+  [ OK ]  src/co5_linux/virtualization/setup-bridge.sh         syntax clean
+  [ OK ]  tools/validate_co5.sh                                syntax clean
+
+== Script hardening checks ==
+  cm-backup.sh                       shebang=1  strict-mode=2  lines=105
+  cm-healthcheck.sh                  shebang=1  strict-mode=1  lines=139
+  cm-usermgmt.sh                     shebang=1  strict-mode=1  lines=127
+  setup-bridge.sh                    shebang=1  strict-mode=1  lines=54
+
+== BIND 9 configuration ==
+  [ -- ]  named-checkconf not installed on this host;
+          running the structural equivalent instead
+  [  OK  ] db.cloudmatrix.local
+          $TTL=3600  SOA=1  NS=2  A=15  PTR=0  CNAME=4
+          serial=2026090201  (YYYYMMDDnn form)
+  [  OK  ] db.10.20.30
+          $TTL=3600  SOA=1  NS=2  A=0  PTR=15  CNAME=0
+          serial=2026090201  (YYYYMMDDnn form)
+  [  OK  ] db.10.20.40
+          $TTL=3600  SOA=1  NS=2  A=0  PTR=4  CNAME=0
+          serial=2026090201  (YYYYMMDDnn form)
+  [  OK  ] forward/reverse consistency: 15 A records, 15 PTR records, every address matched
+
+== ISC DHCP configuration ==
+  [ -- ]  dhcpd not installed on this host;
+          running the structural equivalent instead
+  [  OK  ] brace balance = 0
+          subnets      : 3 -> 10.20.30.0, 10.20.40.0, 10.20.50.0
+          pools        : 10.20.30.100-10.20.30.199, 10.20.40.50-10.20.40.150
+          reservations : 4 -> vm-web-01, vm-db-02, vm-dns-03, vm-win11-07
+  [  OK  ] MAC uniqueness: 4 reservations, 4 distinct
+  [  OK  ] authoritative flag present
+
+== libvirt domain XML ==
+  [  OK  ] libvirt-vm-web-01.xml is well-formed XML
+          domain       : vm-web-01  (type=kvm)
+          vcpu / memory: 4 vCPU, 2048 MiB max, 1024 MiB balloon floor
+          disk cache   : none (guest fsync reaches stable storage)
+          IOPS cap     : 3000
+          traffic filter: clean-traffic
+          seclabel     : selinux
+
+== Xen guest configuration ==
+  [  OK  ] xen-vm-db-02.cfg parsed
+          name        = "vm-db-02"
+          vcpus       = 4
+          maxvcpus    = 8                # room to hot-plug without a reboot
+          cpus        = ["8", "9", "10", "11"]
+          cpu_weight  = 512              # 2x the default 256: DB tier outranks batch
+          memory      = 8192             # MB, the ballooned floor
+          maxmem      = 16384            # MB, the ceiling the balloon may inflate to
+          disks       = 2 (qcow2 OS volume + raw LVM passthrough)
+
+== netplan bridge definition ==
+  [  OK  ] 30 significant lines, 0 tab characters (YAML forbids tabs)
+          top-level keys: bridges, ethernets, renderer, version
+          bridge address: 10.20.30.5/24
+          STP enabled   : yes
+
+== logrotate retention policy ==
+  [  OK  ] /var/log/named/query.log           daily    keep 30
+  [  OK  ] /var/log/named/security.log        weekly   keep 52
+  [  OK  ] /var/log/cloudmatrix/*.log         daily    keep 90
+  [  OK  ] /var/log/libvirt/qemu/*.log        weekly   keep 12
+
+==============================================================================
+ CO5 validation complete.
+==============================================================================
