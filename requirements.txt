@@ -1,0 +1,4 @@
+# CloudMatrix OS assignment - runtime dependencies
+# The simulators themselves use only the Python standard library; matplotlib is
+# needed solely to render the report figures.
+matplotlib>=3.7
